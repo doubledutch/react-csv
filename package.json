@@ -60,7 +60,7 @@
     "isparta-loader": "^2.0.0",
     "jsdom": "9.8.3",
     "jsdom-global": "2.1.0",
-    "mocha": "^3.2.0",
+    "mocha": "^3.5.3",
     "mocha-lcov-reporter": "^1.2.0",
     "node-sass": "^4.5.3",
     "prop-types": "^15.5.8",
