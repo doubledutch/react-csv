@@ -51,6 +51,31 @@ var CSVDownload = function (_React$Component) {
   }
 
   _createClass(CSVDownload, [{
+    key: 'buildURI',
+    value: function buildURI() {
+      return _core.buildURI.apply(undefined, arguments);
+    }
+  }, {
+    key: 'componentDidMount',
+    value: function componentDidMount() {
+      var _props = this.props,
+          data = _props.data,
+          headers = _props.headers,
+          separator = _props.separator,
+          enclosingCharacter = _props.enclosingCharacter,
+          uFEFF = _props.uFEFF,
+          target = _props.target,
+          specs = _props.specs,
+          replace = _props.replace;
+
+      this.state.page = window.open(this.buildURI(data, uFEFF, headers, separator, enclosingCharacter), target, specs, replace);
+    }
+  }, {
+    key: 'getWindow',
+    value: function getWindow() {
+      return this.state.page;
+    }
+  }, {
     key: 'render',
     value: function render() {
       if (this.state.hasTriggered) return null;
@@ -110,24 +135,33 @@ var CSVLink = function (_React$Component) {
           data = _props.data,
           headers = _props.headers,
           separator = _props.separator,
-          uFEFF = _props.uFEFF;
+          uFEFF = _props.uFEFF,
+          enclosingCharacter = _props.enclosingCharacter;
 
-      if (this._data !== data || this._headers !== headers || this._separator !== separator || this._uFEFF == uFEFF) {
-        this._uri = (0, _core.buildURI)(data, uFEFF, headers, separator);
-        this._data = data;
-        this._headers = headers;
-        this._separator = separator;
-        this._uFEFF = uFEFF;
-      }
-      return this._uri;
+      this.setState({ href: this.buildURI(data, uFEFF, headers, separator, enclosingCharacter) });
     }
   }, {
-    key: "handleLegacy",
-    value: function handleLegacy(event, data, headers, separator, filename) {
+    key: 'componentWillReceiveProps',
+    value: function componentWillReceiveProps(nextProps) {
+      var data = nextProps.data,
+          headers = nextProps.headers,
+          separator = nextProps.separator,
+          uFEFF = nextProps.uFEFF;
+
+      this.setState({ href: this.buildURI(data, uFEFF, headers, separator) });
+    }
+  }, {
+    key: 'buildURI',
+    value: function buildURI() {
+      return _core.buildURI.apply(undefined, arguments);
+    }
+  }, {
+    key: 'handleLegacy',
+    value: function handleLegacy(event, data, headers, separator, filename, enclosingCharacter) {
       if (window.navigator.msSaveOrOpenBlob) {
         event.preventDefault();
 
-        var blob = new Blob([(0, _core.toCSV)(data, headers, separator)]);
+        var blob = new Blob([(0, _core.toCSV)(data, headers, separator, enclosingCharacter)]);
         window.navigator.msSaveBlob(blob, filename);
 
         return false;
@@ -197,7 +231,8 @@ var CSVLink = function (_React$Component) {
           children = _props2.children,
           onClick = _props2.onClick,
           asyncOnClick = _props2.asyncOnClick,
-          rest = _objectWithoutProperties(_props2, ["data", "headers", "separator", "filename", "uFEFF", "children", "onClick", "asyncOnClick"]);
+          enclosingCharacter = _props2.enclosingCharacter,
+          rest = _objectWithoutProperties(_props2, ['data', 'headers', 'separator', 'filename', 'uFEFF', 'children', 'onClick', 'asyncOnClick', 'enclosingCharacter']);
 
       var href = this.getURI();
       return _react2.default.createElement(
@@ -208,8 +243,9 @@ var CSVLink = function (_React$Component) {
           ref: function ref(link) {
             return _this4.link = link;
           },
-          href: href,
-          onClick: this.handleClick(data, headers, separator, filename)
+          target: '_self',
+          href: this.state.href,
+          onClick: this.handleClick(data, headers, separator, filename, enclosingCharacter)
         }),
         children
       );
@@ -297,39 +333,44 @@ var elementOrEmpty = exports.elementOrEmpty = function elementOrEmpty(element) {
 };
 
 var joiner = exports.joiner = function joiner(data) {
-  var separator = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : ",";
-  return data.map(function (row, index) {
-    if (row == null) return null;
+  var separator = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : ',';
+  var enclosingCharacter = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : '"';
+
+  return data.filter(function (e) {
+    return e;
+  }).map(function (row) {
     return row.map(function (element) {
-      return '"' + elementOrEmpty(element) + '"';
+      return elementOrEmpty(element);
+    }).map(function (column) {
+      return "" + enclosingCharacter + column + enclosingCharacter;
     }).join(separator);
   }).join("\n");
 };
 
-var arrays2csv = exports.arrays2csv = function arrays2csv(data, headers, separator) {
-  return joiner(headers ? [headers].concat(_toConsumableArray(data)) : data, separator);
+var arrays2csv = exports.arrays2csv = function arrays2csv(data, headers, separator, enclosingCharacter) {
+  return joiner(headers ? [headers].concat(_toConsumableArray(data)) : data, separator, enclosingCharacter);
 };
 
-var jsons2csv = exports.jsons2csv = function jsons2csv(data, headers, separator) {
-  return joiner(jsons2arrays(data, headers), separator);
+var jsons2csv = exports.jsons2csv = function jsons2csv(data, headers, separator, enclosingCharacter) {
+  return joiner(jsons2arrays(data, headers), separator, enclosingCharacter);
 };
 
-var string2csv = exports.string2csv = function string2csv(data, headers, separator) {
+var string2csv = exports.string2csv = function string2csv(data, headers, separator, enclosingCharacter) {
   return headers ? headers.join(separator) + "\n" + data : data;
 };
 
-var toCSV = exports.toCSV = function toCSV(data, headers, separator) {
-  if (isJsons(data)) return jsons2csv(data, headers, separator);
-  if (isArrays(data)) return arrays2csv(data, headers, separator);
-  if (typeof data === "string") return string2csv(data, headers, separator);
+var toCSV = exports.toCSV = function toCSV(data, headers, separator, enclosingCharacter) {
+  if (isJsons(data)) return jsons2csv(data, headers, separator, enclosingCharacter);
+  if (isArrays(data)) return arrays2csv(data, headers, separator, enclosingCharacter);
+  if (typeof data === 'string') return string2csv(data, headers, separator);
   throw new TypeError("Data should be a \"String\", \"Array of arrays\" OR \"Array of objects\" ");
 };
 
-var buildURI = exports.buildURI = function buildURI(data, uFEFF, headers, separator) {
-  var csv = toCSV(data, headers, separator);
-  var type = isSafari() ? "application/csv" : "text/csv";
-  var blob = new Blob([uFEFF ? "\uFEFF" : "", csv], { type: type });
-  var dataURI = "data:" + type + ";charset=utf-8," + (uFEFF ? "\uFEFF" : "") + csv;
+var buildURI = exports.buildURI = function buildURI(data, uFEFF, headers, separator, enclosingCharacter) {
+  var csv = toCSV(data, headers, separator, enclosingCharacter);
+  var type = isSafari() ? 'application/csv' : 'text/csv';
+  var blob = new Blob([uFEFF ? "\uFEFF" : '', csv], { type: type });
+  var dataURI = "data:" + type + ";charset=utf-8," + (uFEFF ? "\uFEFF" : '') + csv;
 
   var URL = window.URL || window.webkitURL;
 

@@ -20,13 +20,14 @@ class CSVLink extends React.Component {
 
   // Caches a single value of the built data URI.
   getURI() {
-    const {data, headers, separator, uFEFF} = this.props;
-    if (this._data !== data || this._headers !== headers || this._separator !== separator || this._uFEFF == uFEFF) {
-      this._uri = buildURI(data, uFEFF, headers, separator);
+    const {data, headers, separator, uFEFF, enclosingCharacter} = this.props;
+    if (this._data !== data || this._headers !== headers || this._separator !== separator || this._uFEFF == uFEFF || this._enclosingCharacter !== enlosingCharacter) {
+      this._uri = buildURI(data, uFEFF, headers, separator, enclosingCharacter);
       this._data = data;
       this._headers = headers;
       this._separator = separator;
       this._uFEFF = uFEFF;
+      this._enclosingCharacter = enclosingCharacter;
     }
     return this._uri;
   }
@@ -34,13 +35,13 @@ class CSVLink extends React.Component {
   /**
    * In IE11 this method will trigger the file download
    */
-  handleLegacy(event, data, headers, separator, filename) {
+  handleLegacy(event, data, headers, separator, filename, enclosingCharacter) {
     // If this browser is IE 11, it does not support the `download` attribute
     if (window.navigator.msSaveOrOpenBlob) {
       // Stop the click propagation
       event.preventDefault();
 
-      let blob = new Blob([toCSV(data, headers, separator)]);
+      let blob = new Blob([toCSV(data, headers, separator, enclosingCharacter)]);
       window.navigator.msSaveBlob(blob, filename);
 
       return false;
@@ -79,7 +80,7 @@ class CSVLink extends React.Component {
     };
   }
 
-  render(){
+  render() {
     const {
       data,
       headers,
@@ -89,16 +90,18 @@ class CSVLink extends React.Component {
       children,
       onClick,
       asyncOnClick,
+      enclosingCharacter,
       ...rest
     } = this.props;
-    const href = this.getURI();
+
     return (
       <a
         download={filename}
         {...rest}
         ref={link => (this.link = link)}
-        href={href}
-        onClick={this.handleClick(data, headers, separator, filename)}
+        target="_self"
+        href={this.getURI()}
+        onClick={this.handleClick(data, headers, separator, filename, enclosingCharacter)}
       >
         {children}
       </a>
